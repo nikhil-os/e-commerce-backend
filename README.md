@@ -31,38 +31,41 @@ A comprehensive Node.js/Express backend for e-commerce applications with MongoDB
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/Saniya95/E-commerce-backend.git
    cd E-commerce-backend
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Environment Setup**
    Create a `.env` file in the root directory:
+
    ```env
    # Database
    MONGO_URI=your_mongodb_connection_string
-   
+
    # JWT
    JWT_SECRET=your_jwt_secret_key
-   
+
    # Server
    PORT=5000
    NODE_ENV=development
-   
+
    # Cloudinary (for image uploads)
    CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
    CLOUDINARY_API_KEY=your_cloudinary_api_key
    CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-   
+
    # Razorpay (for payments)
    RAZORPAY_KEY_ID=your_razorpay_key_id
    RAZORPAY_KEY_SECRET=your_razorpay_key_secret
-   
+
    # Firebase (optional - for additional features)
    FIREBASE_ADMIN_KEY=your_firebase_admin_sdk_json
    ```
@@ -78,53 +81,53 @@ The server will run on `http://localhost:5000`
 
 ### Authentication Endpoints
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/users/register` | Register new user | No |
-| POST | `/api/users/login` | User login | No |
-| POST | `/api/users/logout` | User logout | Yes |
-| GET | `/api/users/profile` | Get user profile | Yes |
+| Method | Endpoint              | Description       | Auth Required |
+| ------ | --------------------- | ----------------- | ------------- |
+| POST   | `/api/users/register` | Register new user | No            |
+| POST   | `/api/users/login`    | User login        | No            |
+| POST   | `/api/users/logout`   | User logout       | Yes           |
+| GET    | `/api/users/profile`  | Get user profile  | Yes           |
 
 ### Product Endpoints
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/api/products` | Get all products (with pagination, search, filter) | No |
-| GET | `/api/products/id/:id` | Get product by ID | No |
-| GET | `/api/products/:slug` | Get product by slug | No |
-| GET | `/api/products/category/:category` | Get products by category | No |
-| POST | `/api/products` | Create product | Admin |
-| PUT | `/api/products/:id` | Update product | Admin |
-| DELETE | `/api/products/:id` | Delete product | Admin |
-| POST | `/api/products/:id/reviews` | Add product review | User |
+| Method | Endpoint                           | Description                                        | Auth Required |
+| ------ | ---------------------------------- | -------------------------------------------------- | ------------- |
+| GET    | `/api/products`                    | Get all products (with pagination, search, filter) | No            |
+| GET    | `/api/products/id/:id`             | Get product by ID                                  | No            |
+| GET    | `/api/products/:slug`              | Get product by slug                                | No            |
+| GET    | `/api/products/category/:category` | Get products by category                           | No            |
+| POST   | `/api/products`                    | Create product                                     | Admin         |
+| PUT    | `/api/products/:id`                | Update product                                     | Admin         |
+| DELETE | `/api/products/:id`                | Delete product                                     | Admin         |
+| POST   | `/api/products/:id/reviews`        | Add product review                                 | User          |
 
 ### Cart Endpoints
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/api/cart` | Get user's cart | Yes |
-| POST | `/api/cart/add` | Add item to cart | Yes |
-| PUT | `/api/cart/update/:productId` | Update cart item quantity | Yes |
-| DELETE | `/api/cart/remove/:productId` | Remove item from cart | Yes |
-| DELETE | `/api/cart/clear` | Clear entire cart | Yes |
+| Method | Endpoint                      | Description               | Auth Required |
+| ------ | ----------------------------- | ------------------------- | ------------- |
+| GET    | `/api/cart`                   | Get user's cart           | Yes           |
+| POST   | `/api/cart/add`               | Add item to cart          | Yes           |
+| PUT    | `/api/cart/update/:productId` | Update cart item quantity | Yes           |
+| DELETE | `/api/cart/remove/:productId` | Remove item from cart     | Yes           |
+| DELETE | `/api/cart/clear`             | Clear entire cart         | Yes           |
 
 ### Payment Endpoints
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/payment/create-order` | Create order | Yes |
-| POST | `/api/payment/cod/:orderId` | Process COD payment | Yes |
-| POST | `/api/payment/create/:orderId` | Create Razorpay order | Yes |
-| POST | `/api/payment/verify` | Verify Razorpay payment | Yes |
+| Method | Endpoint                       | Description             | Auth Required |
+| ------ | ------------------------------ | ----------------------- | ------------- |
+| POST   | `/api/payment/create-order`    | Create order            | Yes           |
+| POST   | `/api/payment/cod/:orderId`    | Process COD payment     | Yes           |
+| POST   | `/api/payment/create/:orderId` | Create Razorpay order   | Yes           |
+| POST   | `/api/payment/verify`          | Verify Razorpay payment | Yes           |
 
 ### Category Endpoints
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/api/categories` | Get all categories | No |
-| POST | `/api/categories` | Create category | Admin |
-| PUT | `/api/categories/:id` | Update category | Admin |
-| DELETE | `/api/categories/:id` | Delete category | Admin |
+| Method | Endpoint              | Description        | Auth Required |
+| ------ | --------------------- | ------------------ | ------------- |
+| GET    | `/api/categories`     | Get all categories | No            |
+| POST   | `/api/categories`     | Create category    | Admin         |
+| PUT    | `/api/categories/:id` | Update category    | Admin         |
+| DELETE | `/api/categories/:id` | Delete category    | Admin         |
 
 ## 🛠️ Tech Stack
 
@@ -175,12 +178,14 @@ The server will run on `http://localhost:5000`
 ## 🔧 Development Features
 
 ### Database Seeding
+
 ```bash
 # Access admin panel for seeding data
 GET http://localhost:5000/admin.html
 ```
 
 ### Testing Endpoints
+
 - **Product API Test**: `http://localhost:5000/product-id-test.html`
 - **Cart Functionality**: `http://localhost:5000/cart-tester.html`
 - **Payment Flow**: `http://localhost:5000/razorpay-test.html`
@@ -189,6 +194,7 @@ GET http://localhost:5000/admin.html
 ## 🚀 Deployment
 
 ### Environment Variables for Production
+
 ```env
 NODE_ENV=production
 MONGO_URI=your_production_mongodb_uri
@@ -197,6 +203,7 @@ JWT_SECRET=your_strong_jwt_secret
 ```
 
 ### Deploy to Heroku/Railway/Vercel
+
 1. Set environment variables in your deployment platform
 2. Ensure MongoDB Atlas is configured for production
 3. Update CORS origins for your frontend domain
