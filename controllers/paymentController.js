@@ -1,6 +1,7 @@
 require("dotenv").config();
 const Razorpay = require("razorpay");
 const userModel = require("../models/usermodel");
+const orderModel = require("../models/ordermodel");
 
 console.log("DEBUG ENV:", process.env.NODE_ENV);
 console.log("RAZORPAY_KEY_ID:", process.env.RAZORPAY_KEY_ID);
@@ -10,6 +11,24 @@ const razorpayInstance = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+const DELIVERY_FEE = 50;
+
+const normalisePaymentMethod = (method = "") => {
+  const value = method.toUpperCase();
+  if (value === "COD" || value === "CASH_ON_DELIVERY") return "COD";
+  if (value === "ONLINE" || value === "RAZORPAY") return "ONLINE";
+  return "UNKNOWN";
+};
+
+const findOrderByAnyId = async (orderId) => {
+  if (!orderId) return null;
+  if (orderId.match(/^[0-9a-fA-F]{24}$/)) {
+    const order = await orderModel.findById(orderId);
+    if (order) return order;
+  }
+  return orderModel.findOne({ legacyOrderId: orderId });
+};
+
 exports.checkoutPage = async (req, res) => {
   const user = await userModel.findById(req.user.id).populate("cart.product");
 
@@ -18,13 +37,12 @@ exports.checkoutPage = async (req, res) => {
     (acc, item) => acc + item.product.price * item.quantity,
     0
   );
-  const delivery = 50;
-  const total = subtotal + delivery;
+  const total = subtotal + DELIVERY_FEE;
 
   res.render("checkout", {
     cart,
     subtotal,
-    delivery,
+    delivery: DELIVERY_FEE,
     total,
     razorpayKey: process.env.RAZORPAY_KEY_ID,
   });
@@ -39,7 +57,7 @@ exports.createOrder = async (req, res) => {
     });
 
     const userId = req.user.id;
-    const { addressId, total } = req.body;
+    const { addressId, total, paymentMethod } = req.body;
 
     // Validate user has items in cart
     const user = await userModel.findById(userId).populate("cart.product");
@@ -58,8 +76,7 @@ exports.createOrder = async (req, res) => {
       (acc, item) => acc + item.product.price * item.quantity,
       0
     );
-    const delivery = 50;
-    const calculatedTotal = calculatedSubtotal + delivery;
+    const calculatedTotal = calculatedSubtotal + DELIVERY_FEE;
 
     console.log("💰 Price calculation:", {
       calculatedSubtotal,
@@ -78,24 +95,54 @@ exports.createOrder = async (req, res) => {
     }
 
     // Generate order ID
-    const orderId =
+    const legacyOrderId =
       "order_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
 
-    console.log("✅ Order created successfully:", orderId);
+    const selectedAddress = addressId
+      ? user.address?.id(addressId) ||
+        user.address?.find((address) => String(address._id) === addressId)
+      : user.address?.find((address) => address.isDefault);
 
-    // Here you would typically save the order to database
-    // For now, we'll just return the order ID
-    // In a real app, you'd save: orderId, userId, addressId, items, total, status: 'pending'
+    const shippingAddress = selectedAddress
+      ? {
+          fullName: selectedAddress.fullName,
+          mobile: selectedAddress.mobile,
+          street: selectedAddress.street,
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          zip: selectedAddress.zip,
+          country: selectedAddress.country,
+        }
+      : null;
+
+    const orderDoc = await orderModel.create({
+      userId,
+      legacyOrderId,
+      items: user.cart.map((item) => ({
+        product: item.product._id || item.product,
+        quantity: item.quantity,
+      })),
+      subtotalAmount: calculatedSubtotal,
+      deliveryFee: DELIVERY_FEE,
+      totalAmount: calculatedTotal,
+      paymentMethod: normalisePaymentMethod(paymentMethod),
+      status: "Pending",
+      shippingAddress,
+    });
+
+    console.log("✅ Order persisted with id:", orderDoc._id.toString());
 
     res.status(200).json({
       success: true,
       order: {
-        id: orderId,
-        userId: userId,
-        addressId: addressId,
+        id: orderDoc._id.toString(),
+        legacyId: legacyOrderId,
+        userId,
+        addressId,
         total: calculatedTotal,
         items: user.cart,
-        status: "pending",
+        status: orderDoc.status,
+        paymentMethod: orderDoc.paymentMethod,
       },
     });
   } catch (err) {
@@ -128,13 +175,19 @@ exports.processCOD = async (req, res) => {
 
     console.log("✅ COD: Processing payment for", user.cart.length, "items");
 
-    // Here you would typically:
-    // 1. Update order status to "confirmed"
-    // 2. Send confirmation email
-    // 3. Update inventory
-    // 4. ONLY THEN clear the cart
+    const order = await findOrderByAnyId(orderId);
+    if (!order) {
+      console.log("❌ COD: Order not found", orderId);
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
-    // Clear user's cart ONLY after successful order confirmation
+    order.status = "Confirmed";
+    order.paymentMethod = "COD";
+    await order.save();
+
     user.cart = [];
     await user.save();
 
@@ -143,7 +196,7 @@ exports.processCOD = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Order confirmed with Cash on Delivery",
-      orderId: orderId,
+      orderId: order._id.toString(),
     });
   } catch (err) {
     console.error("❌ COD Payment Error:", err);
@@ -175,8 +228,7 @@ exports.processOnlinePayment = async (req, res) => {
       (acc, item) => acc + item.product.price * item.quantity,
       0
     );
-    const delivery = 50;
-    const total = subtotal + delivery;
+    const total = subtotal + DELIVERY_FEE;
 
     // Create Razorpay order
     const options = {
@@ -193,6 +245,13 @@ exports.processOnlinePayment = async (req, res) => {
     console.log("Creating Razorpay order with options:", options); // Debug log
     const razorpayOrder = await razorpayInstance.orders.create(options);
     console.log("Razorpay order created:", razorpayOrder); // Debug log
+
+    const order = await findOrderByAnyId(orderId);
+    if (order) {
+      order.paymentMethod = "ONLINE";
+      order.razorpayOrderId = razorpayOrder.id;
+      await order.save();
+    }
 
     // DO NOT clear cart here - only clear after payment verification
     res.status(200).json({
@@ -250,10 +309,19 @@ exports.verifyPayment = async (req, res) => {
         await user.save();
       }
 
+      const order = await findOrderByAnyId(orderId);
+      if (order) {
+        order.status = "Confirmed";
+        order.paymentMethod = "ONLINE";
+        order.razorpayOrderId = razorpay_order_id;
+        order.razorpayPaymentId = razorpay_payment_id;
+        await order.save();
+      }
+
       res.status(200).json({
         success: true,
         message: "Payment verified successfully",
-        orderId: orderId,
+        orderId: order ? order._id.toString() : orderId,
         paymentId: razorpay_payment_id,
       });
     } else {

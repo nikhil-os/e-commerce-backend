@@ -300,10 +300,35 @@ exports.getUserOrders = async (req, res) => {
       })
       .sort({ createdAt: -1 }); // Most recent first
 
+    const pendingStatuses = ["Pending", "Shipped"];
+    const completedStatuses = ["Confirmed", "Delivered"];
+
+    const stats = orders.reduce(
+      (acc, order) => {
+        acc.totalOrders += 1;
+        if (completedStatuses.includes(order.status)) {
+          acc.completedOrders += 1;
+        } else if (pendingStatuses.includes(order.status)) {
+          acc.pendingOrders += 1;
+        }
+        if (order.status !== "Cancelled") {
+          acc.totalSpent += order.totalAmount || 0;
+        }
+        return acc;
+      },
+      {
+        totalOrders: 0,
+        totalSpent: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+      }
+    );
+
     res.status(200).json({
       success: true,
-      orders: orders,
-      totalOrders: orders.length,
+      orders,
+      totalOrders: stats.totalOrders,
+      stats,
     });
   } catch (err) {
     console.error("❌ Error fetching user orders:", err);

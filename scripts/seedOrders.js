@@ -100,7 +100,10 @@ const seedOrders = async () => {
             quantity: 1,
           },
         ],
+        subtotalAmount: products[0].price * 2 + products[1].price,
+        deliveryFee: 50,
         totalAmount: products[0].price * 2 + products[1].price + 50,
+        paymentMethod: "ONLINE",
         status: "Delivered",
         createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
       },
@@ -112,7 +115,10 @@ const seedOrders = async () => {
             quantity: 1,
           },
         ],
+        subtotalAmount: products[2].price,
+        deliveryFee: 50,
         totalAmount: products[2].price + 50,
+        paymentMethod: "COD",
         status: "Shipped",
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
       },
@@ -124,7 +130,10 @@ const seedOrders = async () => {
             quantity: 3,
           },
         ],
+        subtotalAmount: products[3].price * 3,
+        deliveryFee: 50,
         totalAmount: products[3].price * 3 + 50,
+        paymentMethod: "ONLINE",
         status: "Confirmed",
         createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
       },
@@ -152,7 +161,10 @@ const seedOrders = async () => {
             quantity: 2,
           },
         ],
+        subtotalAmount: products[4].price * 2,
+        deliveryFee: 50,
         totalAmount: products[4].price * 2 + 50,
+        paymentMethod: "ONLINE",
         status: "Cancelled",
         createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
       });
