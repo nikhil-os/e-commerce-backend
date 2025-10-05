@@ -80,7 +80,7 @@ exports.createOrder = async (req, res) => {
 
     console.log("💰 Price calculation:", {
       calculatedSubtotal,
-      delivery,
+      deliveryFee: DELIVERY_FEE,
       calculatedTotal,
       providedTotal: total,
     });

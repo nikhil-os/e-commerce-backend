@@ -104,7 +104,13 @@ app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Special route to serve placeholder image for frontend
-app.get("/placeholder-product.jpg", (req, res) => {
+const sendPlaceholder = (req, res) => {
+  const allowedOrigin = corsOptions.origin.find(
+    (origin) => origin === req.headers.origin
+  );
+  if (allowedOrigin) {
+    res.header("Access-Control-Allow-Origin", allowedOrigin);
+  }
   const placeholderPath = path.join(
     __dirname,
     "public",
@@ -123,7 +129,10 @@ app.get("/placeholder-product.jpg", (req, res) => {
       </svg>`);
     }
   });
-});
+};
+
+app.get("/placeholder-product.jpg", sendPlaceholder);
+app.get("/api/static/placeholder-product.jpg", sendPlaceholder);
 
 // API Routers
 // All API routes are now prefixed with /api
