@@ -35,23 +35,27 @@ connectDB();
 
 // CORS Configuration
 // This is important to allow your Next.js frontend to communicate with the API.
-app.use(
-  cors({
-    origin: ["http://localhost:3000", "http://localhost:3001"], // Your Next.js frontend
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "Accept",
-      "X-Requested-With",
-    ],
-    exposedHeaders: ["Set-Cookie"],
-  })
-);
+const corsOptions = {
+  origin: [
+    "http://localhost:3000",
+    process.env.PROD_ORIGIN || "https://your-prod-domain",
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  exposedHeaders: ["Set-Cookie"],
+};
+
+app.use(cors(corsOptions));
+
+// Ensure credentials flag is always exposed
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
 
 // Add CORS preflight for all routes
-app.options("*", cors());
+app.options("*", cors(corsOptions));
 
 // Core Middleware
 app.use(express.json({ limit: "50mb" })); // Increase JSON payload limit for base64 images

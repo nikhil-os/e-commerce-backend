@@ -8,6 +8,13 @@ const admin = require("../firebase/firebase-admin");
 const path = require("path");
 const fs = require("fs");
 
+const TOKEN_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "None",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+};
+
 // 🔐 SIGNUP
 exports.signup = async (req, res) => {
   const errors = validationResult(req);
@@ -38,11 +45,7 @@ exports.signup = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    res.cookie("token", token, TOKEN_COOKIE_OPTIONS);
 
     return res.status(201).json({
       success: true,
@@ -87,11 +90,7 @@ exports.login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    res.cookie("token", token, TOKEN_COOKIE_OPTIONS);
 
     return res.status(200).json({
       success: true,
@@ -126,7 +125,7 @@ exports.firebaseLogin = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-    res.cookie("token", token, { httpOnly: true });
+    res.cookie("token", token, TOKEN_COOKIE_OPTIONS);
     return res.json({ success: true });
   } catch (err) {
     console.error(err);

@@ -8,7 +8,21 @@ const { success, error } = require("../utils/response");
 const userModel = require("../models/usermodel");
 
 exports.verifyUser = async (req, res, next) => {
-  const token = req.cookies.token;
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  let headerToken = null;
+
+  if (typeof authHeader === "string" && authHeader.trim().length > 0) {
+    headerToken = authHeader.trim().startsWith("Bearer ")
+      ? authHeader.trim().slice(7).trim()
+      : authHeader.trim();
+  }
+
+  const cookieToken = req.cookies?.token;
+  const tokensToCheck = [];
+
+  if (headerToken) tokensToCheck.push(headerToken);
+  if (cookieToken && cookieToken !== headerToken)
+    tokensToCheck.push(cookieToken);
 
   // Enhanced logging control - only log when needed
   const shouldLog =
@@ -17,30 +31,44 @@ exports.verifyUser = async (req, res, next) => {
     !req.cookies.__next_hmr_refresh_hash__;
 
   if (shouldLog) {
-    console.log("🔍 Auth check for:", req.originalUrl);
+    console.log("🔍 Auth check for:", req.originalUrl, {
+      headerTokenPresent: Boolean(headerToken),
+      cookieTokenPresent: Boolean(cookieToken),
+    });
   }
 
-  if (!token) {
+  if (tokensToCheck.length === 0) {
     return res
       .status(401)
       .json({ success: false, message: "No token provided" });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await userModel.findById(decoded.id);
-    if (!user) {
-      return res
-        .status(401)
-        .json({ success: false, message: "User not found" });
-    }
+  let decoded = null;
+  let lastError = null;
 
-    req.user = user; // ✅ attach user to request
-    next();
-  } catch (err) {
-    console.error("🚨 JWT Error:", err.message);
+  for (const candidate of tokensToCheck) {
+    try {
+      decoded = jwt.verify(candidate, process.env.JWT_SECRET);
+      break;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (!decoded) {
+    if (shouldLog && lastError) {
+      console.error("🚨 JWT Error:", lastError.message);
+    }
     return res.status(401).json({ success: false, message: "Invalid token" });
   }
+
+  const user = await userModel.findById(decoded.id);
+  if (!user) {
+    return res.status(401).json({ success: false, message: "User not found" });
+  }
+
+  req.user = user; // ✅ attach user to request
+  next();
 };
 
 // middlewares/auth.js
