@@ -35,14 +35,27 @@ connectDB();
 
 // CORS Configuration
 // This is important to allow your Next.js frontend to communicate with the API.
+const allowedOrigins = Array.from(
+  new Set(
+    [
+      "http://localhost:3000",
+      "https://e-commerce-frontend-omega-seven.vercel.app",
+      process.env.PROD_ORIGIN,
+    ].filter(Boolean)
+  )
+);
+
 const corsOptions = {
-  origin: [
-    "http://localhost:3000",
-    process.env.PROD_ORIGIN || "https://your-prod-domain",
-  ],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`Blocked by CORS: ${origin}`);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
   exposedHeaders: ["Set-Cookie"],
 };
 
@@ -105,11 +118,16 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Special route to serve placeholder image for frontend
 const sendPlaceholder = (req, res) => {
-  const allowedOrigin = corsOptions.origin.find(
-    (origin) => origin === req.headers.origin
-  );
-  if (allowedOrigin) {
-    res.header("Access-Control-Allow-Origin", allowedOrigin);
+  const requestOrigin = req.headers.origin;
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    res.header("Access-Control-Allow-Origin", requestOrigin);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+    );
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Vary", "Origin");
   }
   const placeholderPath = path.join(
     __dirname,
