@@ -8,10 +8,11 @@ const admin = require("../firebase/firebase-admin");
 const path = require("path");
 const fs = require("fs");
 
+const isProduction = process.env.NODE_ENV === "production";
 const TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: true,
-  sameSite: "None",
+  secure: isProduction,
+  sameSite: isProduction ? "None" : "Lax",
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
 };
 
@@ -50,6 +51,7 @@ exports.signup = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "User registered successfully.",
+      token,
       user: {
         id: user._id,
         fullname: user.fullname,
@@ -95,6 +97,7 @@ exports.login = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Login successful",
+      token,
       user: {
         id: user._id,
         fullname: user.fullname,
@@ -126,7 +129,7 @@ exports.firebaseLogin = async (req, res) => {
       { expiresIn: "7d" }
     );
     res.cookie("token", token, TOKEN_COOKIE_OPTIONS);
-    return res.json({ success: true });
+    return res.json({ success: true, token });
   } catch (err) {
     console.error(err);
     return res
@@ -203,7 +206,16 @@ exports.profilePage = async (req, res) => {
 
 // 🔓 LOGOUT
 exports.logout = (req, res) => {
-  res.clearCookie("token"); // remove JWT token cookie
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "None" : "Lax",
+  });
+
+  if (req.xhr || req.headers["content-type"] === "application/json") {
+    return res.status(200).json({ success: true, message: "Logged out" });
+  }
+
   req.flash("success", "You have been logged out.");
   res.redirect("/login");
 };

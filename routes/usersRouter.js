@@ -5,40 +5,12 @@ const {
   signupValidator,
   loginValidator,
 } = require("../middlewares/validators");
+const { verifyUser } = require("../middlewares/auth");
 const User = require("../models/usermodel");
-const jwt = require("jsonwebtoken");
 const multer = require("multer");
 
 // Configure multer for file uploads
 const upload = multer({ dest: "public/uploads/" });
-
-// --- API-Centric Authentication Middleware ---
-// This middleware protects routes that require a logged-in user.
-// It replaces the old `ensureAuth` and `verifyUser` that used redirects.
-const requireAuth = async (req, res, next) => {
-  const token = req.cookies.token;
-
-  if (!token) {
-    return res
-      .status(401)
-      .json({ message: "Authentication required. No token provided." });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Attach user information to the request for downstream handlers
-    req.user = await User.findById(decoded.id).select("-password");
-    if (!req.user) {
-      return res.status(401).json({ message: "User not found." });
-    }
-    next();
-  } catch (err) {
-    console.error("Authentication error:", err.message);
-    return res
-      .status(401)
-      .json({ message: "Authentication failed. Invalid token." });
-  }
-};
 
 // --- User API Routes ---
 
@@ -55,22 +27,24 @@ router.post("/logout", userController.logout);
 router.post("/firebase-login", userController.firebaseLogin);
 
 // GET /api/users/profile - Get current user's profile
-// This route is now protected by our API-centric `requireAuth` middleware.
-router.get("/profile", requireAuth, (req, res) => {
-  // The user object is attached to the request by the `requireAuth` middleware
-  res.status(200).json({ user: req.user });
+router.get("/profile", verifyUser, async (req, res) => {
+  const freshUser = await User.findById(req.user.id || req.user._id)
+    .select("-password")
+    .lean();
+
+  res.status(200).json({ user: freshUser });
 });
 
 // POST /api/users/update-profile - Update user profile
 router.post(
   "/update-profile",
-  requireAuth,
+  verifyUser,
   upload.single("profilepic"),
   userController.updateProfile
 );
 
 // GET /api/users/orders - Get user orders
-router.get("/orders", requireAuth, userController.getUserOrders);
+router.get("/orders", verifyUser, userController.getUserOrders);
 
 // Password Management
 router.post("/forgot-password", userController.forgotPassword); // Assuming this sends an email
